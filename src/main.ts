@@ -2,72 +2,75 @@ export function ToChars(s: string): string[] {
 	return Array.from(s)
 }
 
-// atom is the basic unit in Lisp
+// Atom is the basic unit in Lisp
 // it could be a number or a symbol
 export interface Atom {
 	value: number | string
 }
 
 export function ParseAtom(s: string): Atom {
-	s = s.trim()
+	s = s.trim() // remove leading and trailing whitespace
+	if (s === '') throw new Error('Invalid symbol')
+	// TODO: extend this to validate other symbol naming rules
 	const result = Number(s)
-	if (isNaN(result)) {
-		return <Atom>{ value: s }
-	} else {
-		return <Atom>{ value: result }
-	}
+	return isNaN(result) ? <Atom>{ value: s } : <Atom>{ value: result }
 }
 
-// list is a sequence of atoms or lists
-// q( 1 2 (3 4) (5 6))
+// List is a sequence of Atoms or Lists
+// example: (1 2 (3 4) (5 6))
 export interface List {
 	items: (Atom | List)[]
 }
 
 const ListOpenDelimeter = '('
 const ListCloseDelimeter = ')'
-const ElementDelimeter = ' '
-function ParseListActual(s: string, i: number = 0): [List, number] {
-	if (!s || s.length == 0) return [<List>{ items: [] }, 0]
+const ListElementDelimeter = ' '
 
+function ParseListActual(elements: string[], i: number): [List, number] {
+	let result = <List>{ items: [] }
+	let atomStart = -1
 	const AddAtom = () => {
-		if (j != -1) {
-			const term = elements.slice(j, i)
+		if (atomStart != -1) {
+			const term = elements.slice(atomStart, i)
 			result.items.push(ParseAtom(term.join('')))
 		}
 	}
-	const elements = ToChars(s)
-	let result = <List>{ items: [] }
-	let j = -1
 	while (i < elements.length) {
-		if (elements[i] == ListCloseDelimeter) {
+		if (elements[i] === ListCloseDelimeter) { // exit condition
 			AddAtom()
 			return [result, i + 1]
 		}
-		if (elements[i] == ListOpenDelimeter) {
-			const [result1, k] = ParseListActual(s, i + 1)
+		if (elements[i] === ListOpenDelimeter) {
+			const [r, k] = ParseListActual(elements, i + 1)
 			i = k
-			result.items.push(result1)
+			result.items.push(r)
 		}
-		if (j == -1 && elements[i] != ElementDelimeter) {
-			j = i // start of an atom
+		// find the start of an atom. 
+		// rationale: If the atom's start had not already
+		// found and then we discover a non-space, then this is the
+		// start of the atom
+		if (atomStart == -1 && elements[i] != ListElementDelimeter) {
+			atomStart = i
 		}
-		if (elements[i] == ElementDelimeter) {
+		// find the end of an atom
+		// rationale: if we found a space then AddAtom <- only adds if atom 
+		// was already discovered.
+		if (elements[i] === ListElementDelimeter) {
+			// found the whole of the atom
 			AddAtom()
-			j = -1
+			atomStart = -1
 		}
 		i++
 	}
-
 	return [result, i]
-
 }
 
 export function ParseList(s: string): List {
-	if (!s || s.length == 0) throw new Error("Expected starting (")
+	if (s.length == 0) throw new Error("Expected a valid string")
 	s = s.trim()
-	if (s[0] != ListOpenDelimeter) throw "Expected starting ("
-	const [l, k] = ParseListActual(s, 0)
-	console.log('l=', l)
+	if (s[0] !== '(') throw new Error("Starting ( not found")
+	const elements = ToChars(s)
+	const [l, m] = ParseListActual(elements, 0)
+	console.log(l)
 	return <List>l.items[0]
 }

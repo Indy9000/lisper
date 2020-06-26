@@ -6,10 +6,18 @@
   "scripts": {
     "test": "jest"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Indy9000/lisper.git"
+  },
   "author": "",
   "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Indy9000/lisper/issues"
+  },
+  "homepage": "https://github.com/Indy9000/lisper#readme",
   "devDependencies": {
-    "@types/jest": "^26.0.2",
+    "@types/jest": "^26.0.3",
     "@types/node": "^14.0.14",
     "jest": "^26.1.0",
     "ts-jest": "^26.1.1",
