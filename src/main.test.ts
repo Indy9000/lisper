@@ -158,3 +158,49 @@ test('2 level nested arithmetic operation should evaluate correctly', () => {
 
 	expect(actual.value).toBe(expected.value)
 })
+
+test('2 level nested arithmetic operation should evaluate correctly', () => {
+	const t = ParseList('(+ 10 20 (* 30 (- 20 10)))')
+	const actual = Eval(t)
+	const expected = <Atom>{
+		value: 330
+	}
+
+	expect(actual.value).toBe(expected.value)
+})
+//----------------------------------------------------------------------------
+test('logical op == should throw', () => {
+	const t = ParseList('(==)')
+	const actual = () => { Eval(t) }
+	expect(actual).toThrowError(Error("Logical operation == needs 2 arguments"))
+})
+
+test('logical op == should throw', () => {
+	const t = ParseList('(== 1)')
+	const actual = () => { Eval(t) }
+	expect(actual).toThrowError(Error("Logical operation == needs 2 arguments"))
+})
+
+test('logical op == should succeed', () => {
+	const t = ParseList('(== 1 1)')
+	const actual = Eval(t)
+	expect(actual.value).toBe(true)
+})
+
+test('logical op == should succeed', () => {
+	const t = ParseList('(== 1 2)')
+	const actual = Eval(t)
+	expect(actual.value).toBe(false)
+})
+
+test('logical op == should succeed', () => {
+	const t = ParseList('(!= 1 1)')
+	const actual = Eval(t)
+	expect(actual.value).toBe(false)
+})
+
+test('logical op == should succeed', () => {
+	const t = ParseList('(!= 1 2)')
+	const actual = Eval(t)
+	expect(actual.value).toBe(true)
+})
