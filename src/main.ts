@@ -99,7 +99,6 @@ const _sub = (a: Atom, b: Atom): Atom => {
 	return _validateAndEval(a, b, (c: number, d: number) => c - d)
 }
 const _mul = (a: Atom, b: Atom): Atom => {
-	console.log('in mul')
 	return _validateAndEval(a, b, (c: number, d: number) => c * d)
 }
 const _div = (a: Atom, b: Atom): Atom => {
