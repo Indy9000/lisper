@@ -1,4 +1,4 @@
-import { ToChars, Atom, ParseAtom, List, ParseList } from './main'
+import { ToChars, Atom, ParseAtom, List, ParseList, Eval } from './main'
 
 test('should return an array of chars, given a string', () => {
 	const actual = ToChars('abc')
@@ -129,4 +129,32 @@ test('should return a nested list given a string of arithmetic expression', () =
 	expect((<Atom>b[1]).value === (<Atom>c[1]).value).toBe(true)
 	expect((<Atom>b[2]).value === (<Atom>c[2]).value).toBe(true)
 
+})
+
+test('simple arithmetic operation should evaluate correctly', () => {
+	const t = ParseList('(+ 1 2)')
+	const actual = Eval(t)
+	const expected = <Atom>{
+		value: 3
+	}
+	expect(expected.value).toBe(actual.value)
+})
+
+test('1 level nested arithmetic operation should evaluate correctly', () => {
+	const t = ParseList('(+ 1 2 (* 3 4))')
+	const actual = Eval(t)
+	const expected = <Atom>{
+		value: 15
+	}
+	expect(expected.value).toBe(actual.value)
+})
+
+test('2 level nested arithmetic operation should evaluate correctly', () => {
+	const t = ParseList('(+ 1 2 (* 3 (- 2 1)))')
+	const actual = Eval(t)
+	const expected = <Atom>{
+		value: 6
+	}
+
+	expect(actual.value).toBe(expected.value)
 })
