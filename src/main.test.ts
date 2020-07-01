@@ -23,6 +23,18 @@ test('should return a symbol Atom, given a string containing a name', () => {
 	expect(expected.value).toBe(actual.value)
 })
 
+test('should return a symbol Atom, given a string containing a boolean', () => {
+	const actual = ParseAtom('true')
+	const expected = <Atom<boolean>>{ value: true }
+	expect(expected.value).toBe(actual.value)
+})
+
+test('should return a symbol Atom, given a string containing a boolean', () => {
+	const actual = ParseAtom('false')
+	const expected = <Atom<boolean>>{ value: false }
+	expect(expected.value).toBe(actual.value)
+})
+
 test('should throw if the given string is invalid', () => {
 	const actual = () => { ParseAtom('') }
 	expect(actual).toThrowError(Error('Invalid symbol'))
@@ -235,4 +247,28 @@ test('logical ops should succeed', () => {
 	const t = ParseList('(== (== 1 1) (!= a b))')
 	const actual = Eval(t)
 	expect(actual.value).toBe(true)
+})
+
+test('conditional logic, if then else', () => {
+	const t = ParseList('(if (> 2 1) good bad)')
+	const actual = Eval(t)
+	expect(actual.value).toBe('good')
+})
+
+test('conditional logic, if then else', () => {
+	const t = ParseList('(if (> 1 2) good bad)')
+	const actual = Eval(t)
+	expect(actual.value).toBe('bad')
+})
+
+test('conditional logic, if then else', () => {
+	const t = ParseList('(if (> 2 1) (* 3 3) (/ 49 7))')
+	const actual = Eval(t)
+	expect(actual.value).toBe(9)
+})
+
+test('conditional logic, if then else', () => {
+	const t = ParseList('(if (> 1 2) (* 3 3) (/ 64 8))')
+	const actual = Eval(t)
+	expect(actual.value).toBe(8)
 })

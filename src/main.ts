@@ -14,7 +14,17 @@ export function ParseAtom(s: string): AUT {
 	if (s === '') throw new Error('Invalid symbol')
 	// TODO: extend this to validate other symbol naming rules
 	const result = Number(s)
-	return isNaN(result) ? <Atom<string>>{ value: s } : <Atom<number>>{ value: result }
+	if (isNaN(result)) {
+		if (s === 'true') {
+			return <Atom<boolean>>{ value: true }
+		}
+		if (s === 'false') {
+			return <Atom<boolean>>{ value: false }
+		}
+		return <Atom<string>>{ value: s }
+	} else {
+		return <Atom<number>>{ value: result }
+	}
 }
 
 // List is a sequence of Atoms or Lists
@@ -83,7 +93,6 @@ function isAtom(o: AUT | List): o is AUT {
 function isList(o: AUT | List): o is List {
 	return (o as List).items !== undefined
 }
-
 function first(l: List): AUT {
 	if (l.items.length == 0) return <Atom<number>>{ value: 0 } // TODO: fix default
 	if (isAtom(l.items[0])) {
@@ -124,6 +133,17 @@ const _basicArithmeticOps: FunMap1 = {
 	'+': _add, '-': _sub, '*': _mul, '/': _div
 }
 
+function performBasicArithmeticOps(r: List, f: Atom<string>): Atom<number> {
+	const fun = _basicArithmeticOps[f.value]
+	const evaluated = r.items.map(el => Eval(el))
+	if (evaluated.length < 2) throw new Error('Arithmetic operation ' + f.value + ' needs 2 or more arguments')
+	let a = <Atom<number>>evaluated[0]
+	for (let i = 1; i < evaluated.length; i++) {
+		a = fun(a, <Atom<number>>evaluated[i])
+	}
+	return a
+}
+
 // -------------------------------------------------------------
 const _equal = <T>(a: AUT, b: AUT): Atom<boolean> => {
 	return <Atom<boolean>>{ value: a.value === b.value }
@@ -144,9 +164,28 @@ const _lt = <T>(a: AUT, b: AUT): Atom<boolean> => {
 interface FunMap2 {
 	[key: string]: (a: AUT, b: AUT) => Atom<boolean>
 }
+
 const _logicalOps: FunMap2 = {
 	'==': _equal, '!=': _notEqual, '>': _gt, '<': _lt
 }
+
+// logical ops are == != > < 
+function performLogicalOps(r: List, f: Atom<string>): Atom<boolean> {
+	const fun = _logicalOps[<string>f.value]
+	if (r.items.length != 2) throw new Error('Logical operation ' + f.value + ' needs 2 arguments')
+	const [a, b] = r.items
+	const a1 = Eval(a)
+	const b1 = Eval(b)
+	return fun(a1, b1)
+}
+
+function performConditional(r: List, f: Atom<string>): AUT {
+	const [test, ifTrue, ifFalse] = r.items
+	console.log(ifTrue, ifFalse);
+
+	return Eval(test).value ? Eval(ifTrue) : Eval(ifFalse)
+}
+// -------------------------------------------------------------
 
 export function Eval(k: AUT | List): AUT {
 	if (isAtom(k)) {
@@ -163,31 +202,12 @@ export function Eval(k: AUT | List): AUT {
 		if (f.value in _basicArithmeticOps) {
 			return performBasicArithmeticOps(r, f)
 		} else if (f.value in _logicalOps) {
-			return perormLogicalOps(r, f)
+			return performLogicalOps(r, f)
+		} else if (f.value === 'if') {
+			return performConditional(r, f)
 		} else
-			throw new Error('Function/Operator ' + f.value + ' Not found')
+			return f
 	}
 
 	throw new Error('Unknown Error evaluating ' + k)
-}
-
-function performBasicArithmeticOps(r: List, f: Atom<string>): Atom<number> {
-	const fun = _basicArithmeticOps[f.value]
-	const evaluated = r.items.map(el => Eval(el))
-	if (evaluated.length < 2) throw new Error('Arithmetic operation ' + f.value + ' needs 2 or more arguments')
-	let a = <Atom<number>>evaluated[0]
-	for (let i = 1; i < evaluated.length; i++) {
-		a = fun(a, <Atom<number>>evaluated[i])
-	}
-	return a
-}
-
-// logical ops are == != > < !
-function perormLogicalOps(r: List, f: Atom<string>): Atom<boolean> {
-	const fun = _logicalOps[<string>f.value]
-	if (r.items.length != 2) throw new Error('Logical operation ' + f.value + ' needs 2 arguments')
-	const [a, b] = r.items
-	const a1 = Eval(a)
-	const b1 = Eval(b)
-	return fun(a1, b1)
 }
