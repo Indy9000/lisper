@@ -44,13 +44,7 @@ function ParseListActual(elements: string[], i: number): [List, number] {
 			const [r, k] = ParseListActual(elements, i + 1)
 			i = k
 			result.items.push(r)
-		}
-		// find the start of an atom. 
-		// rationale: If the atom's start had not already
-		// found and then we discover a non-space, then this is the
-		// start of the atom
-		if (atomStart == -1 && elements[i] != ListElementDelimeter) {
-			atomStart = i
+			continue
 		}
 		// find the end of an atom
 		// rationale: if we found a space then AddAtom <- only adds if atom 
@@ -59,6 +53,14 @@ function ParseListActual(elements: string[], i: number): [List, number] {
 			// found the whole of the atom
 			AddAtom()
 			atomStart = -1
+		} else {
+			// find the start of an atom. 
+			// rationale: If the atom's start had not already
+			// found and then we discover a non-space, then this is the
+			// start of the atom
+			if (atomStart == -1) {
+				atomStart = i
+			}
 		}
 		i++
 	}
@@ -71,6 +73,82 @@ export function ParseList(s: string): List {
 	if (s[0] !== '(') throw new Error("Starting ( not found")
 	const elements = ToChars(s)
 	const [l, m] = ParseListActual(elements, 0)
-	console.log(l)
 	return <List>l.items[0]
+}
+
+export function isAtom(o: Atom | List): o is Atom {
+	return (o as Atom).value !== undefined
+}
+
+export function isList(o: Atom | List): o is List {
+	return (o as List).items !== undefined
+}
+
+export function first(l: List): Atom {
+	if (l.items.length === 0) throw Error('List is empty')
+	if (isAtom(l.items[0])) {
+		return l.items[0]
+	} else {
+		throw Error('Expected an Atom at the start of a List')
+	}
+}
+
+export function rest(l: List): List {
+	let result = <List>{ items: [] }
+	if (l.items.length === 0) return result
+	result.items = l.items.slice(1)
+	return result
+}
+
+type basicArithmeticOp = (a: Atom, b: Atom) => Atom
+interface FunMap {
+	[key: string]: basicArithmeticOp
+}
+type ArithmeticOp = (c: number, d: number) => number
+const validate = (a: Atom, b: Atom, op: ArithmeticOp): Atom => {
+	if (typeof a.value === 'number' && typeof b.value === 'number') {
+		return <Atom>{ value: op(a.value, b.value) }
+	}
+	throw Error('Invalid term in arithmetic operation')
+}
+
+const _add = (a: Atom, b: Atom): Atom => {
+	return validate(a, b, (c: number, d: number) => c + d)
+}
+const _sub = (a: Atom, b: Atom): Atom => {
+	return validate(a, b, (c: number, d: number) => c - d)
+}
+const _mul = (a: Atom, b: Atom): Atom => {
+	return validate(a, b, (c: number, d: number) => c * d)
+}
+const _div = (a: Atom, b: Atom): Atom => {
+	return validate(a, b, (c: number, d: number) => c / d)
+}
+
+const _builtInFunctionNames: FunMap = {
+	'+': _add, '-': _sub, '*': _mul, '/': _div
+}
+// rule 1: A list should start with a symbol which can be a
+//         name of an operator
+export function Eval(exp: Atom | List): Atom {
+	// if Atom, return itself
+	if (isAtom(exp)) {
+		return exp
+	} else if (isList(exp)) {
+		// if List evaluate the first
+		// then evaluate the rest
+		const f = first(exp)
+		if (f.value in _builtInFunctionNames) {
+			const r = rest(exp)
+			const evaluated = r.items.map(k => Eval(k))
+			if (evaluated.length === 0) throw Error('Not enough arguments to the operator ' + f.value)
+			let a = evaluated[0]
+			const fun = _builtInFunctionNames[f.value]
+			for (let i = 1; i < evaluated.length; i++) {
+				a = fun(a, evaluated[i])
+			}
+			return a
+		}
+	}
+	throw Error('Unknown evaluation error ' + exp)
 }
