@@ -35,7 +35,7 @@ export interface List {
 
 const ListOpenDelimeter = '('
 const ListCloseDelimeter = ')'
-const ListElementDelimeter = ' '
+const ListElementDelimeter = [' ', '\t', '\n', '\r']
 
 function ParseListActual(elements: string[], i: number): [List, number] {
 	let result = <List>{ items: [] }
@@ -60,7 +60,7 @@ function ParseListActual(elements: string[], i: number): [List, number] {
 		// find the end of an atom
 		// rationale: if we found a space then AddAtom <- only adds if atom 
 		// was already discovered.
-		if (elements[i] === ListElementDelimeter) {
+		if (ListElementDelimeter.includes(elements[i])) {
 			// found the whole of the atom
 			AddAtom()
 			atomStart = -1
@@ -133,9 +133,9 @@ const _basicArithmeticOps: FunMap1 = {
 	'+': _add, '-': _sub, '*': _mul, '/': _div
 }
 
-function performBasicArithmeticOps(r: List, f: Atom<string>): Atom<number> {
+function performBasicArithmeticOps(r: List, f: Atom<string>, ctx: FunMap3): Atom<number> {
 	const fun = _basicArithmeticOps[f.value]
-	const evaluated = r.items.map(el => Eval(el))
+	const evaluated = r.items.map(el => Eval(el, ctx))
 	if (evaluated.length < 2) throw new Error('Arithmetic operation ' + f.value + ' needs 2 or more arguments')
 	let a = <Atom<number>>evaluated[0]
 	for (let i = 1; i < evaluated.length; i++) {
@@ -166,48 +166,111 @@ interface FunMap2 {
 }
 
 const _logicalOps: FunMap2 = {
-	'==': _equal, '!=': _notEqual, '>': _gt, '<': _lt
+	'=': _equal, '!=': _notEqual, '>': _gt, '<': _lt
 }
 
 // logical ops are == != > < 
-function performLogicalOps(r: List, f: Atom<string>): Atom<boolean> {
+function performLogicalOps(r: List, f: Atom<string>, ctx: FunMap3): Atom<boolean> {
 	const fun = _logicalOps[<string>f.value]
 	if (r.items.length != 2) throw new Error('Logical operation ' + f.value + ' needs 2 arguments')
 	const [a, b] = r.items
-	const a1 = Eval(a)
-	const b1 = Eval(b)
+	const a1 = Eval(a, ctx)
+	const b1 = Eval(b, ctx)
 	return fun(a1, b1)
 }
 
-function performConditional(r: List, f: Atom<string>): AUT {
+function performConditional(r: List, f: Atom<string>, ctx: FunMap3): AUT {
 	const [test, ifTrue, ifFalse] = r.items
-	console.log(ifTrue, ifFalse);
-
-	return Eval(test).value ? Eval(ifTrue) : Eval(ifFalse)
+	return Eval(test, ctx).value ? Eval(ifTrue, ctx) : Eval(ifFalse, ctx)
 }
 // -------------------------------------------------------------
+type TUserFunc = (a: List) => AUT
+interface FunMap3 {
+	[key: string]: TUserFunc | AUT | List
+}
 
-export function Eval(k: AUT | List): AUT {
+export function Run(k: AUT | List): AUT {
+	let ctx: FunMap3 = {}
+	const retval = Eval(k, ctx)
+	if ('main' in ctx) {
+		const fun = <TUserFunc>ctx['main']
+		const params = <List>{ items: [] }
+		return fun(params)
+	}
+	return retval
+}
+
+export function Eval(k: AUT | List, ctx: FunMap3 = {}): AUT {
 	if (isAtom(k)) {
 		switch (typeof k.value) {
 			case "boolean":
-			case "string":
 			case "number": {
 				return k
+			} break;
+			case "string": {
+				// if string starts with ' <- do not substitue
+				if (k.value.startsWith("'")) {
+					return k
+				} else {
+					// else return the value of the variable name					
+					if (k.value in ctx) {
+						return <AUT>ctx[k.value]
+					}
+				}
 			}
 		}
 	} else if (isList(k)) {
 		const f = <Atom<string>>first(k)
 		const r = rest(k)
 		if (f.value in _basicArithmeticOps) {
-			return performBasicArithmeticOps(r, f)
+			return performBasicArithmeticOps(r, f, ctx)
 		} else if (f.value in _logicalOps) {
-			return performLogicalOps(r, f)
+			return performLogicalOps(r, f, ctx)
 		} else if (f.value === 'if') {
-			return performConditional(r, f)
-		} else
+			return performConditional(r, f, ctx)
+		} else if (f.value === 'defun') {
+			// handle function definition
+			if (r.items.length < 3) throw Error('Malformed function definition')
+			const fname = <Atom<string>>r.items[0]
+
+			if (fname.value in ctx) {
+				throw Error('function `' + fname.value + '` already defined')
+			} else {
+				// get the names of the function parameters
+				const params = <List>r.items[1]
+				// store the function
+				ctx[fname.value] = ((args) => {
+					// associate each argument with the parameter name
+					if (args.items.length != params.items.length)
+						throw Error('Expected ' + params.items.length +
+							' number of arguments to function `' + fname.value +
+							'` but was given ' + args.items.length + ' with ')
+					for (let i = 0; i < params.items.length; i++) {
+						const p = params.items[i]
+						if (!isAtom(p))
+							throw Error('Param must be an Atom')
+						if (typeof p.value !== 'string')
+							throw Error('Param must be a string')
+						ctx[p.value] = args.items[i]
+						console.log(`setting ${p.value} = ${args.items[i]}`)
+					}
+
+					// Evaluate the bodies and return the last one's result
+					// Defn <name> <args> <body1> <body2> .. <bodyn>
+					const h = r.items.slice(2).map(k => Eval(k, ctx))
+					return h[h.length - 1]
+				})
+				return <Atom<boolean>>{ value: true } // TODO: is this ok?
+			}
+		} else if (f.value in ctx) {
+			const fun = <TUserFunc>ctx[f.value]
+			const args = r.items.slice(0)
+			const a = args.map(k => Eval(k, ctx))
+			const params = <List>{ items: a }
+			return fun(params)
+		}
+		else
 			return f
 	}
-
 	throw new Error('Unknown Error evaluating ' + k)
 }
