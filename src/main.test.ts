@@ -328,7 +328,7 @@ test("arbitrary function with argument definition within main", () => {
 	expect(actual.value).toBe("'bigger")
 })
 
-test("arbitrary function with argument definition within main", () => {
+test("recursive evaluation with funny function name", () => {
 	const t = ParseList(`
 	(defun main ()
 		(defun ! (n)
@@ -341,7 +341,7 @@ test("arbitrary function with argument definition within main", () => {
 	expect(actual.value).toBe(6)
 })
 
-test("arbitrary function with argument definition within main", () => {
+test("recursive evaluation", () => {
 	const t = ParseList(`
 	(defun main ()
 		(defun factorial (n)
