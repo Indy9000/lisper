@@ -3,11 +3,7 @@ import { ToChars, Atom, ParseAtom, List, ParseList, Eval, Run } from "./main"
 test("should return an array of chars, given a string", () => {
 	const actual = ToChars("abc")
 	const expected = ["a", "b", "c"]
-	let result = true
-	for (let i = 0; i < expected.length; i++) {
-		result = result && (expected[i] == actual[i])
-	}
-	expect(result).toBe(true)
+	expect(actual).toEqual(expected)
 })
 
 // Tests fro Atom
@@ -73,10 +69,7 @@ test("should return a List with 2 Atoms", () => {
 	const expected = <List>{
 		items: [<Atom<number>>{ value: 1 }, <Atom<string>>{ value: "a" }]
 	}
-	expect(expected.items.length === actual.items.length).toBe(true)
-	expect((<Atom<number>>expected.items[0]).value === (<Atom<number>>actual.items[0]).value).toBe(true)
-	expect((<Atom<string>>expected.items[1]).value === (<Atom<string>>actual.items[1]).value).toBe(true)
-
+	expect(actual).toEqual(expected)
 })
 
 test("should return a List, given a string with nested list", () => {
@@ -91,10 +84,7 @@ test("should return a List, given a string with nested list", () => {
 		]
 	}
 
-	expect(expected.items.length === actual.items.length).toBe(true)
-	expect((<Atom<number>>expected.items[0]).value === (<Atom<number>>actual.items[0]).value).toBe(true)
-	expect((<Atom<number>>expected.items[1]).value === (<Atom<number>>actual.items[1]).value).toBe(true)
-	expect((<List>expected.items[2]).items.length === 0).toBe(true)
+	expect(actual).toEqual(expected)
 })
 
 test("should return a List, given a string with symbol and numeric atoms", () => {
@@ -107,10 +97,7 @@ test("should return a List, given a string with symbol and numeric atoms", () =>
 		]
 	}
 
-	expect(expected.items.length === actual.items.length).toBe(true)
-	expect((<Atom<string>>expected.items[0]).value === (<Atom<string>>actual.items[0]).value).toBe(true)
-	expect((<Atom<number>>expected.items[1]).value === (<Atom<number>>actual.items[1]).value).toBe(true)
-	expect((<Atom<number>>expected.items[2]).value === (<Atom<number>>actual.items[2]).value).toBe(true)
+	expect(actual).toEqual(expected)
 })
 
 test("should return a nested list given a string of arithmetic expression", () => {
@@ -130,17 +117,7 @@ test("should return a nested list given a string of arithmetic expression", () =
 		]
 	}
 
-	expect(expected.items.length === actual.items.length).toBe(true)
-	expect((<Atom<string>>expected.items[0]).value === (<Atom<string>>actual.items[0]).value).toBe(true)
-	expect((<Atom<number>>expected.items[1]).value === (<Atom<number>>actual.items[1]).value).toBe(true)
-	expect((<Atom<number>>expected.items[2]).value === (<Atom<number>>actual.items[2]).value).toBe(true)
-	const b = (<List>expected.items[3]).items
-	const c = (<List>actual.items[3]).items
-	expect(b.length === c.length).toBe(true)
-	expect((<Atom<string>>b[0]).value === (<Atom<string>>c[0]).value).toBe(true)
-	expect((<Atom<number>>b[1]).value === (<Atom<number>>c[1]).value).toBe(true)
-	expect((<Atom<number>>b[2]).value === (<Atom<number>>c[2]).value).toBe(true)
-
+	expect(actual).toEqual(expected)
 })
 
 test("simple arithmetic operation should evaluate correctly", () => {
@@ -149,7 +126,7 @@ test("simple arithmetic operation should evaluate correctly", () => {
 	const expected = <Atom<number>>{
 		value: 3
 	}
-	expect(expected.value).toBe(actual.value)
+	expect(actual).toEqual(expected)
 })
 
 test("1 level nested arithmetic operation should evaluate correctly", () => {
@@ -158,7 +135,7 @@ test("1 level nested arithmetic operation should evaluate correctly", () => {
 	const expected = <Atom<Number>>{
 		value: 15
 	}
-	expect(expected.value).toBe(actual.value)
+	expect(actual).toEqual(expected)
 })
 
 test("2 level nested arithmetic operation should evaluate correctly", () => {
@@ -167,7 +144,7 @@ test("2 level nested arithmetic operation should evaluate correctly", () => {
 	const expected = <Atom<Number>>{
 		value: 6
 	}
-	expect(actual.value).toBe(expected.value)
+	expect(actual).toEqual(expected)
 })
 
 test("2 level nested arithmetic operation should evaluate correctly", () => {
@@ -177,7 +154,7 @@ test("2 level nested arithmetic operation should evaluate correctly", () => {
 		value: 330
 	}
 
-	expect(actual.value).toBe(expected.value)
+	expect(actual).toEqual(expected)
 })
 //----------------------------------------------------------------------------
 test("logical op == should throw", () => {
