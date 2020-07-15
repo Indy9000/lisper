@@ -4,22 +4,34 @@ export function ToChars(s: string): string[] {
 
 // Atom is the basic unit in Lisp
 // it could be a number or a symbol
-export interface Atom {
-	value: number | string
+export interface Atom<T> {
+	value: T
 }
 
-export function ParseAtom(s: string): Atom {
+type AUT = Atom<string> | Atom<boolean> | Atom<number>
+
+export function ParseAtom(s: string): AUT {
 	s = s.trim() // remove leading and trailing whitespace
 	if (s === '') throw new Error('Invalid symbol')
 	// TODO: extend this to validate other symbol naming rules
 	const result = Number(s)
-	return isNaN(result) ? <Atom>{ value: s } : <Atom>{ value: result }
+	if (isNaN(result)) {
+		if (s === 'true') {
+			return <Atom<boolean>>{ value: true }
+		}
+		if (s === 'false') {
+			return <Atom<boolean>>{ value: false }
+		}
+		return <Atom<string>>{ value: s }
+	} else {
+		return <Atom<number>>{ value: result }
+	}
 }
 
 // List is a sequence of Atoms or Lists
 // example: (1 2 (3 4) (5 6))
 export interface List {
-	items: (Atom | List)[]
+	items: (AUT | List)[]
 }
 
 const ListOpenDelimeter = '('
@@ -76,15 +88,15 @@ export function ParseList(s: string): List {
 	return <List>l.items[0]
 }
 
-export function isAtom(o: Atom | List): o is Atom {
-	return (o as Atom).value !== undefined
+export function isAtom(o: AUT | List): o is AUT {
+	return (o as AUT).value !== undefined
 }
 
-export function isList(o: Atom | List): o is List {
+export function isList(o: AUT | List): o is List {
 	return (o as List).items !== undefined
 }
 
-export function first(l: List): Atom {
+export function first(l: List): AUT {
 	if (l.items.length === 0) throw Error('List is empty')
 	if (isAtom(l.items[0])) {
 		return l.items[0]
@@ -100,55 +112,95 @@ export function rest(l: List): List {
 	return result
 }
 
-type basicArithmeticOp = (a: Atom, b: Atom) => Atom
-interface FunMap {
+const _add = (a: Atom<number>, b: Atom<number>): Atom<number> => {
+	return <Atom<number>>{ value: a.value + b.value }
+}
+const _sub = (a: Atom<number>, b: Atom<number>): Atom<number> => {
+	return <Atom<number>>{ value: a.value - b.value }
+}
+const _mul = (a: Atom<number>, b: Atom<number>): Atom<number> => {
+	return <Atom<number>>{ value: a.value * b.value }
+}
+const _div = (a: Atom<number>, b: Atom<number>): Atom<number> => {
+	return <Atom<number>>{ value: a.value / b.value }
+}
+
+type basicArithmeticOp = (a: Atom<number>, b: Atom<number>) => Atom<number>
+interface FunMap1 {
 	[key: string]: basicArithmeticOp
 }
-type ArithmeticOp = (c: number, d: number) => number
-const validate = (a: Atom, b: Atom, op: ArithmeticOp): Atom => {
-	if (typeof a.value === 'number' && typeof b.value === 'number') {
-		return <Atom>{ value: op(a.value, b.value) }
-	}
-	throw Error('Invalid term in arithmetic operation')
-}
-
-const _add = (a: Atom, b: Atom): Atom => {
-	return validate(a, b, (c: number, d: number) => c + d)
-}
-const _sub = (a: Atom, b: Atom): Atom => {
-	return validate(a, b, (c: number, d: number) => c - d)
-}
-const _mul = (a: Atom, b: Atom): Atom => {
-	return validate(a, b, (c: number, d: number) => c * d)
-}
-const _div = (a: Atom, b: Atom): Atom => {
-	return validate(a, b, (c: number, d: number) => c / d)
-}
-
-const _builtInFunctionNames: FunMap = {
+const _basicArithmeticOps: FunMap1 = {
 	'+': _add, '-': _sub, '*': _mul, '/': _div
+}
+
+function performBasicArithmeticOps(r: List, f: Atom<string>): Atom<number> {
+	const evaluated = r.items.map(k => Eval(k))
+	if (evaluated.length === 0)
+		throw Error('Not enough arguments to the operator ' + f.value)
+	let a = <Atom<number>>evaluated[0]
+	if (typeof f.value === 'string') {
+		const fun = _basicArithmeticOps[f.value]
+		for (let i = 1; i < evaluated.length; i++) {
+			a = fun(a, <Atom<number>>evaluated[i])
+		}
+	}
+	return a
+}
+
+const _equal = (a: AUT, b: AUT): Atom<boolean> => {
+	return <Atom<boolean>>{ value: (a.value === b.value) }
+}
+
+const _notEqual = (a: AUT, b: AUT): Atom<boolean> => {
+	return <Atom<boolean>>{ value: (a.value !== b.value) }
+}
+
+const _gt = (a: AUT, b: AUT): Atom<boolean> => {
+	return <Atom<boolean>>{ value: (a.value > b.value) }
+}
+
+const _lt = (a: AUT, b: AUT): Atom<boolean> => {
+	return <Atom<boolean>>{ value: (a.value < b.value) }
+}
+
+type basicLogicalOp = (a: AUT, b: AUT) => Atom<boolean>
+interface FunMap2 {
+	[key: string]: basicLogicalOp
+}
+const _logicalOps: FunMap2 = {
+	'==': _equal, '!=': _notEqual, '>': _gt, '<': _lt
+}
+function performLogicalOps(r: List, f: Atom<string>): Atom<boolean> {
+	const fun = _logicalOps[<string>f.value]
+	if (r.items.length != 2) throw new Error('Logical operation ' + f.value + ' needs 2 arguments')
+	const [a, b] = r.items
+	return fun(Eval(a), Eval(b))
+}
+
+function performConditional(r: List, f: Atom<string>): AUT {
+	const [test, ifTrue, ifFalse] = r.items
+	return Eval(test).value ? Eval(ifTrue) : Eval(ifFalse)
 }
 // rule 1: A list should start with a symbol which can be a
 //         name of an operator
-export function Eval(exp: Atom | List): Atom {
+export function Eval(exp: AUT | List): AUT {
 	// if Atom, return itself
 	if (isAtom(exp)) {
 		return exp
 	} else if (isList(exp)) {
 		// if List evaluate the first
 		// then evaluate the rest
-		const f = first(exp)
-		if (f.value in _builtInFunctionNames) {
-			const r = rest(exp)
-			const evaluated = r.items.map(k => Eval(k))
-			if (evaluated.length === 0) throw Error('Not enough arguments to the operator ' + f.value)
-			let a = evaluated[0]
-			const fun = _builtInFunctionNames[f.value]
-			for (let i = 1; i < evaluated.length; i++) {
-				a = fun(a, evaluated[i])
-			}
-			return a
+		const f = <Atom<string>>first(exp)
+		const r = rest(exp)
+		if (f.value in _basicArithmeticOps) {
+			return performBasicArithmeticOps(r, f)
+		} else if (f.value in _logicalOps) {
+			return performLogicalOps(r, f)
+		} else if (f.value === 'if') {
+			return performConditional(r, f)
 		}
+		return f
 	}
 	throw Error('Unknown evaluation error ' + exp)
 }
+
