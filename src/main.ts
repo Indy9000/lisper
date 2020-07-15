@@ -8,14 +8,15 @@ export interface Atom<T> {
 	value: T
 }
 
-type AUT = Atom<string> | Atom<boolean> | Atom<number>
+// General form of an ATOM 
+type AUT = Atom<string> | Atom<number> | Atom<boolean>
 
 export function ParseAtom(s: string): AUT {
 	s = s.trim() // remove leading and trailing whitespace
 	if (s === '') throw new Error('Invalid symbol')
 	// TODO: extend this to validate other symbol naming rules
 	const result = Number(s)
-	if (isNaN(result)) {
+	if (isNaN(result)) { //  not a number
 		if (s === 'true') {
 			return <Atom<boolean>>{ value: true }
 		}
@@ -112,6 +113,11 @@ export function rest(l: List): List {
 	return result
 }
 
+type basicArithmeticOp = (a: Atom<number>, b: Atom<number>) => Atom<number>
+interface FunMap {
+	[key: string]: basicArithmeticOp
+}
+
 const _add = (a: Atom<number>, b: Atom<number>): Atom<number> => {
 	return <Atom<number>>{ value: a.value + b.value }
 }
@@ -125,59 +131,78 @@ const _div = (a: Atom<number>, b: Atom<number>): Atom<number> => {
 	return <Atom<number>>{ value: a.value / b.value }
 }
 
-type basicArithmeticOp = (a: Atom<number>, b: Atom<number>) => Atom<number>
-interface FunMap1 {
-	[key: string]: basicArithmeticOp
-}
-const _basicArithmeticOps: FunMap1 = {
+const _basicArithmeticOps: FunMap = {
 	'+': _add, '-': _sub, '*': _mul, '/': _div
 }
 
-function performBasicArithmeticOps(r: List, f: Atom<string>): Atom<number> {
+// f.value contains the symbol
+function performBasicArithmeticOps(r: List, f: Atom<string>) {
 	const evaluated = r.items.map(k => Eval(k))
 	if (evaluated.length === 0)
 		throw Error('Not enough arguments to the operator ' + f.value)
 	let a = <Atom<number>>evaluated[0]
-	if (typeof f.value === 'string') {
-		const fun = _basicArithmeticOps[f.value]
-		for (let i = 1; i < evaluated.length; i++) {
-			a = fun(a, <Atom<number>>evaluated[i])
-		}
+
+	const fun = _basicArithmeticOps[f.value]
+	for (let i = 1; i < evaluated.length; i++) {
+		a = fun(a, <Atom<number>>evaluated[i])
 	}
 	return a
 }
-
-const _equal = (a: AUT, b: AUT): Atom<boolean> => {
-	return <Atom<boolean>>{ value: (a.value === b.value) }
-}
-
-const _notEqual = (a: AUT, b: AUT): Atom<boolean> => {
-	return <Atom<boolean>>{ value: (a.value !== b.value) }
-}
-
-const _gt = (a: AUT, b: AUT): Atom<boolean> => {
-	return <Atom<boolean>>{ value: (a.value > b.value) }
-}
-
-const _lt = (a: AUT, b: AUT): Atom<boolean> => {
-	return <Atom<boolean>>{ value: (a.value < b.value) }
-}
-
-type basicLogicalOp = (a: AUT, b: AUT) => Atom<boolean>
+//-------------------------------------
+// comparison ops
+type basicComparisonOp = (a: AUT, b: AUT) => Atom<boolean>
 interface FunMap2 {
-	[key: string]: basicLogicalOp
+	[key: string]: basicComparisonOp
 }
-const _logicalOps: FunMap2 = {
+const _equal = (a: AUT, b: AUT): Atom<boolean> => {
+	return <Atom<boolean>>{ value: a.value === b.value }
+}
+const _notEqual = (a: AUT, b: AUT): Atom<boolean> => {
+	return <Atom<boolean>>{ value: a.value !== b.value }
+}
+const _gt = (a: AUT, b: AUT): Atom<boolean> => {
+	return <Atom<boolean>>{ value: a.value > b.value }
+}
+const _lt = (a: AUT, b: AUT): Atom<boolean> => {
+	return <Atom<boolean>>{ value: a.value < b.value }
+}
+
+const _basicComparisonOps: FunMap2 = {
 	'==': _equal, '!=': _notEqual, '>': _gt, '<': _lt
 }
-function performLogicalOps(r: List, f: Atom<string>): Atom<boolean> {
-	const fun = _logicalOps[<string>f.value]
+// f.value contains the comparison symbol
+function performBasicComparisonOps(r: List, f: Atom<string>): Atom<boolean> {
+	const fun = _basicComparisonOps[f.value]
+	if (r.items.length != 2) throw new Error('Comparison operation ' + f.value + ' needs 2 arguments')
+	const [a, b] = r.items
+	return fun(Eval(a), Eval(b))
+}
+//-----------------------------------------------------
+// logical ops
+type basicLogicalOp = (a: AUT, b: AUT) => Atom<boolean>
+interface FunMap3 {
+	[key: string]: basicLogicalOp
+}
+const _and = (a: AUT, b: AUT): Atom<boolean> => {
+	return <Atom<boolean>>{ value: a.value && b.value }
+}
+
+const _or = (a: AUT, b: AUT): Atom<boolean> => {
+	return <Atom<boolean>>{ value: a.value || b.value }
+}
+
+const _basicLogicalOps: FunMap2 = {
+	'&&': _and, '||': _or
+}
+
+function performBasicLogicalOps(r: List, f: Atom<string>): Atom<boolean> {
+	const fun = _basicLogicalOps[f.value]
 	if (r.items.length != 2) throw new Error('Logical operation ' + f.value + ' needs 2 arguments')
 	const [a, b] = r.items
 	return fun(Eval(a), Eval(b))
 }
 
-function performConditional(r: List, f: Atom<string>): AUT {
+function performConditionalLogicalOps(r: List, f: Atom<string>): AUT {
 	const [test, ifTrue, ifFalse] = r.items
 	return Eval(test).value ? Eval(ifTrue) : Eval(ifFalse)
 }
@@ -194,10 +219,12 @@ export function Eval(exp: AUT | List): AUT {
 		const r = rest(exp)
 		if (f.value in _basicArithmeticOps) {
 			return performBasicArithmeticOps(r, f)
-		} else if (f.value in _logicalOps) {
-			return performLogicalOps(r, f)
+		} else if (f.value in _basicComparisonOps) {
+			return performBasicComparisonOps(r, f)
+		} else if (f.value in _basicLogicalOps) {
+			return performBasicLogicalOps(r, f)
 		} else if (f.value === 'if') {
-			return performConditional(r, f)
+			return performConditionalLogicalOps(r, f)
 		}
 		return f
 	}

@@ -100,7 +100,6 @@ test('should return a nested list given a string of arithmetic expression', () =
 			}
 		]
 	}
-
 	expect(actual).toEqual(expected)
 })
 
@@ -189,7 +188,7 @@ test('should evaluate a simple arithmetic expression correctly', () => {
 	const actual = Eval(t)
 	const expected = <Atom<number>>{ value: 4 }
 
-	expect(actual.value !== expected.value).toBe(true)
+	expect(actual).not.toEqual(expected)
 })
 
 test('should fail malformed arithmetic operation', () => {
@@ -257,93 +256,151 @@ test('should evaluate a simple arithmetic expression correctly', () => {
 	expect(actual).toEqual(expected)
 })
 
-// Tests for logical operations
+// comparison operations
 
-test('logical op == should throw', () => {
+test('comparison op == should throw', () => {
 	const t = ParseList('(==)')
 	const actual = () => { Eval(t) }
-	expect(actual).toThrowError(Error('Logical operation == needs 2 arguments'))
+	expect(actual).toThrowError(Error('Comparison operation == needs 2 arguments'))
 })
 
-test('logical op == should throw', () => {
+test('comparison op == should throw', () => {
 	const t = ParseList('(== 1)')
 	const actual = () => { Eval(t) }
-	expect(actual).toThrowError(Error('Logical operation == needs 2 arguments'))
+	expect(actual).toThrowError(Error('Comparison operation == needs 2 arguments'))
 })
 
-test('logical op == should succeed', () => {
+test('comparison op == should succeed 1', () => {
 	const t = ParseList('(== 1 1)')
 	const actual = Eval(t)
-	expect(actual.value).toBe(true)
+	expect(actual.value).toEqual(true)
 })
-
-test('logical op == should succeed', () => {
-	const t = ParseList('(== 1 10)')
+test('comparison op == should succeed 2', () => {
+	const t = ParseList('(== 2 1)')
 	const actual = Eval(t)
-	expect(actual.value).toBe(false)
+	expect(actual.value).toEqual(false)
+})
+test('comparison op == should succeed 3', () => {
+	const t = ParseList('(== aaaa aaaa)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(true)
 })
 
-test('logical op != should succeed', () => {
+test('comparison op == should succeed 4', () => {
+	const t = ParseList('(== aaaa aaa)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(false)
+})
+
+test('comparison op != should succeed 1', () => {
 	const t = ParseList('(!= 1 1)')
 	const actual = Eval(t)
-	expect(actual.value).toBe(false)
+	expect(actual.value).toEqual(false)
 })
-test('logical op != should succeed', () => {
-	const t = ParseList('(!= 1 100)')
+test('comparison op != should succeed 2', () => {
+	const t = ParseList('(!= 1 2)')
 	const actual = Eval(t)
-	expect(actual.value).toBe(true)
+	expect(actual.value).toEqual(true)
+})
+test('comparison op > should succeed 1', () => {
+	const t = ParseList('(> 2 1)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(true)
 })
 
-test('logical op == should succeed', () => {
-	const t = ParseList('(== ab ab)')
+test('comparison op > should succeed 2', () => {
+	const t = ParseList('(> 1 2)')
 	const actual = Eval(t)
-	expect(actual.value).toBe(true)
+	expect(actual.value).toEqual(false)
 })
 
-test('logical op == should succeed', () => {
-	const t = ParseList('(== ab bb)')
+test('comparison op < should succeed 1', () => {
+	const t = ParseList('(< 1 2)')
 	const actual = Eval(t)
-	expect(actual.value).toBe(false)
+	expect(actual.value).toEqual(true)
 })
 
-
-test('logical op != should succeed', () => {
-	const t = ParseList('(!= aa aa)')
-	const actual = Eval(t)
-	expect(actual.value).toBe(false)
-})
-test('logical op != should succeed', () => {
-	const t = ParseList('(!= aa ab)')
-	const actual = Eval(t)
-	expect(actual.value).toBe(true)
-})
-
-test('logical ops should succeed', () => {
+test('complex comparison op should succeed 1', () => {
 	const t = ParseList('(== (== 1 1) (!= a b))')
 	const actual = Eval(t)
-	expect(actual.value).toBe(true)
+	expect(actual.value).toEqual(true)
 })
 
-test('conditional logic, if then else 1', () => {
+// logical operations
+// and or not
+test('logical op && should throw', () => {
+	const t = ParseList('(&&)')
+	const actual = () => { Eval(t) }
+	expect(actual).toThrowError(Error('Logical operation && needs 2 arguments'))
+})
+
+test('logical op && should throw', () => {
+	const t = ParseList('(&& true)')
+	const actual = () => { Eval(t) }
+	expect(actual).toThrowError(Error('Logical operation && needs 2 arguments'))
+})
+
+test('logical op && should throw', () => {
+	const t = ParseList('(||)')
+	const actual = () => { Eval(t) }
+	expect(actual).toThrowError(Error('Logical operation || needs 2 arguments'))
+})
+
+test('logical op && should throw', () => {
+	const t = ParseList('(|| true)')
+	const actual = () => { Eval(t) }
+	expect(actual).toThrowError(Error('Logical operation || needs 2 arguments'))
+})
+
+test('logical op && should succeed', () => {
+	const t = ParseList('(&& true true)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(true)
+})
+test('logical op && should succeed', () => {
+	const t = ParseList('(&& true false)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(false)
+})
+
+test('logical op || should succeed', () => {
+	const t = ParseList('(|| true true)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(true)
+})
+test('logical op || should succeed', () => {
+	const t = ParseList('(|| true false)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(true)
+})
+
+// conditional logic
+test('conditional logic, if then else', () => {
 	const t = ParseList('(if (> 2 1) good bad)')
 	const actual = Eval(t)
-	expect(actual.value).toEqual('good')
+	expect(actual.value).toBe('good')
 })
 
-test('conditional logic, if then else 2', () => {
-	const t = ParseList('(if (> 1 2) good bad)')
+test('conditional logic, if then else', () => {
+	const t = ParseList('(if (< 2 1) good bad)')
 	const actual = Eval(t)
-	expect(actual.value).toEqual('bad')
+	expect(actual.value).toBe('bad')
 })
 
-test('conditional logic, if then else 3', () => {
-	const t = ParseList('(if (> 2 1) (* 3 3) (/ 49 7))')
+test('conditional logic, if then else', () => {
+	const t = ParseList('(if (&& (< 1 2) (> 3 1)) good bad)')
 	const actual = Eval(t)
-	expect(actual.value).toEqual(9)
+	expect(actual.value).toBe('good')
 })
 
-test('conditional logic, if then else 4', () => {
-	const t = ParseList('(if (> 1 2) (* 3 3) (/ 49 7))')
+test('conditional logic, if then else', () => {
+	const t = ParseList('(if (&& (< 1 2) (> 3 1)) (* 3 3) bad)')
 	const actual = Eval(t)
-	expect(actual.value).toEqual(7)
+	expect(actual.value).toBe(9)
+})
+
+test('conditional logic, if then else', () => {
+	const t = ParseList('(if (&& (< 2 1) (> 3 1)) (* 3 3) bad)')
+	const actual = Eval(t)
+	expect(actual.value).toBe('bad')
 })
