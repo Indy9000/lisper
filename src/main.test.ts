@@ -3,24 +3,20 @@ import { ToChars, Atom, ParseAtom, List, ParseList, isAtom, isList, first, rest,
 test('should return an array of chars, given a string', () => {
 	const actual = ToChars('abc')
 	const expected = ['a', 'b', 'c']
-	let result = true
-	for (let i = 0; i < expected.length; i++) {
-		result = result && (expected[i] == actual[i])
-	}
-	expect(result).toBe(true)
+	expect(actual).toEqual(expected)
 })
 
 // Tests fro Atom
 test('should return a number Atom, given a string containing a number', () => {
 	const actual = ParseAtom('1')
-	const expected = <Atom>{ value: 1 }
-	expect(expected.value).toBe(actual.value)
+	const expected = <Atom<number>>{ value: 1 }
+	expect(actual).toEqual(expected)
 })
 
 test('should return a symbol Atom, given a string containing a name', () => {
 	const actual = ParseAtom('a')
-	const expected = <Atom>{ value: 'a' }
-	expect(expected.value).toBe(actual.value)
+	const expected = <Atom<string>>{ value: 'a' }
+	expect(actual).toEqual(expected)
 })
 
 test('should throw if the given string is invalid', () => {
@@ -43,92 +39,69 @@ test('should return an empty list for ()', () => {
 	const expected = <List>{
 		items: []
 	}
-	expect(expected.items.length === actual.items.length).toBe(true)
+	expect(actual).toEqual(expected)
 })
 
 test('should return a List with one number Atom', () => {
 	const actual = ParseList('(1)')
 	const expected = <List>{
-		items: [<Atom>{ value: 1 }]
+		items: [<Atom<number>>{ value: 1 }]
 	}
 
-	expect(expected.items.length === actual.items.length).toBe(true)
-	expect((<Atom>expected.items[0]).value === (<Atom>actual.items[0]).value).toBe(true)
+	expect(actual).toEqual(expected)
 })
 
 test('should return a List with 2 Atoms', () => {
 	const actual = ParseList('(1 a)')
 	const expected = <List>{
-		items: [<Atom>{ value: 1 }, <Atom>{ value: 'a' }]
+		items: [<Atom<number>>{ value: 1 }, <Atom<string>>{ value: 'a' }]
 	}
-	expect(expected.items.length === actual.items.length).toBe(true)
-	expect((<Atom>expected.items[0]).value === (<Atom>actual.items[0]).value).toBe(true)
-	expect((<Atom>expected.items[1]).value === (<Atom>actual.items[1]).value).toBe(true)
-
+	expect(actual).toEqual(expected)
 })
 
 test('should return a List, given a string with nested list', () => {
 	const actual = ParseList('(1 2 ())')
 	const expected = <List>{
 		items: [
-			<Atom>{ value: 1 },
-			<Atom>{ value: 2 },
+			<Atom<number>>{ value: 1 },
+			<Atom<number>>{ value: 2 },
 			<List>{
 				items: []
 			}
 		]
 	}
-
-	expect(expected.items.length === actual.items.length).toBe(true)
-	expect((<Atom>expected.items[0]).value === (<Atom>actual.items[0]).value).toBe(true)
-	expect((<Atom>expected.items[1]).value === (<Atom>actual.items[1]).value).toBe(true)
-	expect((<List>expected.items[2]).items.length === 0).toBe(true)
+	expect(actual).toEqual(expected)
 })
 
 test('should return a List, given a string with symbol and numeric atoms', () => {
 	const actual = ParseList('(add 1 2)')
 	const expected = <List>{
 		items: [
-			<Atom>{ value: 'add' },
-			<Atom>{ value: 1 },
-			<Atom>{ value: 2 }
+			<Atom<string>>{ value: 'add' },
+			<Atom<number>>{ value: 1 },
+			<Atom<number>>{ value: 2 }
 		]
 	}
-
-	expect(expected.items.length === actual.items.length).toBe(true)
-	expect((<Atom>expected.items[0]).value === (<Atom>actual.items[0]).value).toBe(true)
-	expect((<Atom>expected.items[1]).value === (<Atom>actual.items[1]).value).toBe(true)
-	expect((<Atom>expected.items[2]).value === (<Atom>actual.items[2]).value).toBe(true)
+	expect(actual).toEqual(expected)
 })
 
 test('should return a nested list given a string of arithmetic expression', () => {
 	const actual = ParseList('(+ 1 2 (* 3 4))')
 	const expected = <List>{
 		items: [
-			<Atom>{ value: '+' },
-			<Atom>{ value: 1 },
-			<Atom>{ value: 2 },
+			<Atom<string>>{ value: '+' },
+			<Atom<number>>{ value: 1 },
+			<Atom<number>>{ value: 2 },
 			<List>{
 				items: [
-					<Atom>{ value: '*' },
-					<Atom>{ value: 3 },
-					<Atom>{ value: 4 },
+					<Atom<string>>{ value: '*' },
+					<Atom<number>>{ value: 3 },
+					<Atom<number>>{ value: 4 },
 				]
 			}
 		]
 	}
-
-	expect(expected.items.length === actual.items.length).toBe(true)
-	expect((<Atom>expected.items[0]).value === (<Atom>actual.items[0]).value).toBe(true)
-	expect((<Atom>expected.items[1]).value === (<Atom>actual.items[1]).value).toBe(true)
-	expect((<Atom>expected.items[2]).value === (<Atom>actual.items[2]).value).toBe(true)
-	const b = (<List>expected.items[3]).items
-	const c = (<List>actual.items[3]).items
-	expect(b.length === c.length).toBe(true)
-	expect((<Atom>b[0]).value === (<Atom>c[0]).value).toBe(true)
-	expect((<Atom>b[1]).value === (<Atom>c[1]).value).toBe(true)
-	expect((<Atom>b[2]).value === (<Atom>c[2]).value).toBe(true)
-
+	expect(actual).toEqual(expected)
 })
 
 test('should return a deep nested list given a string of arithmetic expression', () => {
@@ -139,9 +112,9 @@ test('should return a deep nested list given a string of arithmetic expression',
 				items: [
 					<List>{
 						items: [
-							<Atom>{ value: '+' },
-							<Atom>{ value: 1 },
-							<Atom>{ value: 2 },
+							<Atom<string>>{ value: '+' },
+							<Atom<number>>{ value: 1 },
+							<Atom<number>>{ value: 2 },
 						]
 					}
 				]
@@ -149,48 +122,41 @@ test('should return a deep nested list given a string of arithmetic expression',
 		]
 	}
 
-	expect(actual.items.length).toBe(expected.items.length)
-	const b = (<List>actual.items[0]).items
-	const c = (<List>expected.items[0]).items
-
-	expect(b.length).toBe(c.length)
-	const d = (<List>b[0]).items
-	const e = (<List>c[0]).items
-	expect(d.length).toBe(e.length)
+	expect(actual).toEqual(expected)
 })
 
 // ----------- Eval Tests ------------
 
 test('should return true for a test of an Atom', () => {
-	const actual = isAtom(<Atom>{ value: 3 })
+	const actual = isAtom(<Atom<number>>{ value: 3 })
 	const expected = true
-	expect(actual).toBe(expected)
+	expect(actual).toEqual(expected)
 })
 test('should return false for a test of an Atom', () => {
 	const actual = isAtom(<List>{ items: [] })
 	const expected = false
-	expect(actual).toBe(expected)
+	expect(actual).toEqual(expected)
 })
 
 test('should return true for a test of a List', () => {
 	const actual = isList(<List>{ items: [] })
 	const expected = true
-	expect(actual).toBe(expected)
+	expect(actual).toEqual(expected)
 })
 test('should return false for a test of a List', () => {
-	const actual = isList(<Atom>{ value: 3 })
+	const actual = isList(<Atom<number>>{ value: 3 })
 	const expected = false
-	expect(actual).toBe(expected)
+	expect(actual).toEqual(expected)
 })
 
 test('should return first element of a List', () => {
 	const actual = first(<List>{
 		items: [
-			<Atom>{ value: 3 }
+			<Atom<number>>{ value: 3 }
 		]
 	})
-	const expected = <Atom>{ value: 3 }
-	expect(actual.value).toBe(expected.value)
+	const expected = <Atom<number>>{ value: 3 }
+	expect(actual).toEqual(expected)
 })
 test('should throw and exception if the list is empty', () => {
 	const actual = () => {
@@ -204,27 +170,27 @@ test('should throw and exception if the list is empty', () => {
 test('should return the rest of a List', () => {
 	const actual = rest(<List>{
 		items: [
-			<Atom>{ value: 3 }
+			<Atom<number>>{ value: 3 }
 		]
 	})
 	const expected = <List>{ items: [] }
-	expect(actual.items.length).toBe(expected.items.length)
+	expect(actual).toEqual(expected)
 })
 
 test('should evaluate a simple arithmetic expression correctly', () => {
 	const t = ParseList('(+ 1 2)')
 	const actual = Eval(t)
-	const expected = <Atom>{ value: 3 }
+	const expected = <Atom<number>>{ value: 3 }
 
-	expect(actual.value).toBe(expected.value)
+	expect(actual).toEqual(expected)
 })
 
 test('should evaluate a simple arithmetic expression correctly', () => {
 	const t = ParseList('(+ 1 2)')
 	const actual = Eval(t)
-	const expected = <Atom>{ value: 4 }
+	const expected = <Atom<number>>{ value: 4 }
 
-	expect(actual.value !== expected.value).toBe(true)
+	expect(actual).not.toEqual(expected)
 })
 
 test('should fail malformed arithmetic operation', () => {
@@ -237,57 +203,206 @@ test('should fail malformed arithmetic operation', () => {
 test('should evaluate a simple arithmetic expression correctly', () => {
 	const t = ParseList('(- 1 2)')
 	const actual = Eval(t)
-	const expected = <Atom>{ value: -1 }
+	const expected = <Atom<number>>{ value: -1 }
 
-	expect(actual.value).toBe(expected.value)
+	expect(actual).toEqual(expected)
 })
 
 test('should evaluate a simple arithmetic expression correctly', () => {
 	const t = ParseList('(* 1 2)')
 	const actual = Eval(t)
-	const expected = <Atom>{ value: 2 }
+	const expected = <Atom<number>>{ value: 2 }
 
-	expect(actual.value).toBe(expected.value)
+	expect(actual).toEqual(expected)
 })
 
 test('should evaluate a simple arithmetic expression correctly', () => {
 	const t = ParseList('(/ 1 2)')
 	const actual = Eval(t)
-	const expected = <Atom>{ value: 0.5 }
+	const expected = <Atom<number>>{ value: 0.5 }
 
-	expect(actual.value).toBe(expected.value)
+	expect(actual).toEqual(expected)
 })
 
 test('should evaluate a simple arithmetic expression correctly', () => {
 	const t = ParseList('(+ 1 2 3)')
 	const actual = Eval(t)
-	const expected = <Atom>{ value: 6 }
+	const expected = <Atom<number>>{ value: 6 }
 
-	expect(actual.value).toBe(expected.value)
+	expect(actual).toEqual(expected)
 })
 
 
 test('should evaluate a simple arithmetic expression correctly', () => {
 	const t = ParseList('(+ 1 2 (* 3 4))')
 	const actual = Eval(t)
-	const expected = <Atom>{ value: 15 }
+	const expected = <Atom<number>>{ value: 15 }
 
-	expect(actual.value).toBe(expected.value)
+	expect(actual).toEqual(expected)
 })
 
 test('should evaluate a simple arithmetic expression correctly', () => {
 	const t = ParseList('(+ 1 2 (* 3 (/ 8 2)))')
 	const actual = Eval(t)
-	const expected = <Atom>{ value: 15 }
+	const expected = <Atom<number>>{ value: 15 }
 
-	expect(actual.value).toBe(expected.value)
+	expect(actual).toEqual(expected)
 })
 
 
 test('should evaluate a simple arithmetic expression correctly', () => {
 	const t = ParseList('(+ 1 2 (* 3 (/ 8 2)) 5)')
 	const actual = Eval(t)
-	const expected = <Atom>{ value: 20 }
+	const expected = <Atom<number>>{ value: 20 }
 
-	expect(actual.value).toBe(expected.value)
+	expect(actual).toEqual(expected)
+})
+
+// comparison operations
+
+test('comparison op == should throw', () => {
+	const t = ParseList('(==)')
+	const actual = () => { Eval(t) }
+	expect(actual).toThrowError(Error('Comparison operation == needs 2 arguments'))
+})
+
+test('comparison op == should throw', () => {
+	const t = ParseList('(== 1)')
+	const actual = () => { Eval(t) }
+	expect(actual).toThrowError(Error('Comparison operation == needs 2 arguments'))
+})
+
+test('comparison op == should succeed 1', () => {
+	const t = ParseList('(== 1 1)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(true)
+})
+test('comparison op == should succeed 2', () => {
+	const t = ParseList('(== 2 1)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(false)
+})
+test('comparison op == should succeed 3', () => {
+	const t = ParseList('(== aaaa aaaa)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(true)
+})
+
+test('comparison op == should succeed 4', () => {
+	const t = ParseList('(== aaaa aaa)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(false)
+})
+
+test('comparison op != should succeed 1', () => {
+	const t = ParseList('(!= 1 1)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(false)
+})
+test('comparison op != should succeed 2', () => {
+	const t = ParseList('(!= 1 2)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(true)
+})
+test('comparison op > should succeed 1', () => {
+	const t = ParseList('(> 2 1)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(true)
+})
+
+test('comparison op > should succeed 2', () => {
+	const t = ParseList('(> 1 2)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(false)
+})
+
+test('comparison op < should succeed 1', () => {
+	const t = ParseList('(< 1 2)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(true)
+})
+
+test('complex comparison op should succeed 1', () => {
+	const t = ParseList('(== (== 1 1) (!= a b))')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(true)
+})
+
+// logical operations
+// and or not
+test('logical op && should throw', () => {
+	const t = ParseList('(&&)')
+	const actual = () => { Eval(t) }
+	expect(actual).toThrowError(Error('Logical operation && needs 2 arguments'))
+})
+
+test('logical op && should throw', () => {
+	const t = ParseList('(&& true)')
+	const actual = () => { Eval(t) }
+	expect(actual).toThrowError(Error('Logical operation && needs 2 arguments'))
+})
+
+test('logical op && should throw', () => {
+	const t = ParseList('(||)')
+	const actual = () => { Eval(t) }
+	expect(actual).toThrowError(Error('Logical operation || needs 2 arguments'))
+})
+
+test('logical op && should throw', () => {
+	const t = ParseList('(|| true)')
+	const actual = () => { Eval(t) }
+	expect(actual).toThrowError(Error('Logical operation || needs 2 arguments'))
+})
+
+test('logical op && should succeed', () => {
+	const t = ParseList('(&& true true)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(true)
+})
+test('logical op && should succeed', () => {
+	const t = ParseList('(&& true false)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(false)
+})
+
+test('logical op || should succeed', () => {
+	const t = ParseList('(|| true true)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(true)
+})
+test('logical op || should succeed', () => {
+	const t = ParseList('(|| true false)')
+	const actual = Eval(t)
+	expect(actual.value).toEqual(true)
+})
+
+// conditional logic
+test('conditional logic, if then else', () => {
+	const t = ParseList('(if (> 2 1) good bad)')
+	const actual = Eval(t)
+	expect(actual.value).toBe('good')
+})
+
+test('conditional logic, if then else', () => {
+	const t = ParseList('(if (< 2 1) good bad)')
+	const actual = Eval(t)
+	expect(actual.value).toBe('bad')
+})
+
+test('conditional logic, if then else', () => {
+	const t = ParseList('(if (&& (< 1 2) (> 3 1)) good bad)')
+	const actual = Eval(t)
+	expect(actual.value).toBe('good')
+})
+
+test('conditional logic, if then else', () => {
+	const t = ParseList('(if (&& (< 1 2) (> 3 1)) (* 3 3) bad)')
+	const actual = Eval(t)
+	expect(actual.value).toBe(9)
+})
+
+test('conditional logic, if then else', () => {
+	const t = ParseList('(if (&& (< 2 1) (> 3 1)) (* 3 3) bad)')
+	const actual = Eval(t)
+	expect(actual.value).toBe('bad')
 })
