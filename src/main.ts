@@ -37,7 +37,7 @@ export interface List {
 
 const ListOpenDelimeter = '('
 const ListCloseDelimeter = ')'
-const ListElementDelimeter = ' '
+const ListElementDelimeter = [' ', '\t', '\n', '\r']
 
 function ParseListActual(elements: string[], i: number): [List, number] {
 	let result = <List>{ items: [] }
@@ -62,7 +62,7 @@ function ParseListActual(elements: string[], i: number): [List, number] {
 		// find the end of an atom
 		// rationale: if we found a space then AddAtom <- only adds if atom 
 		// was already discovered.
-		if (elements[i] === ListElementDelimeter) {
+		if (ListElementDelimeter.includes(elements[i])) {
 			// found the whole of the atom
 			AddAtom()
 			atomStart = -1
@@ -136,8 +136,8 @@ const _basicArithmeticOps: FunMap = {
 }
 
 // f.value contains the symbol
-function performBasicArithmeticOps(r: List, f: Atom<string>) {
-	const evaluated = r.items.map(k => Eval(k))
+function performBasicArithmeticOps(r: List, f: Atom<string>, ctx: Context) {
+	const evaluated = r.items.map(k => Eval(k, ctx))
 	if (evaluated.length === 0)
 		throw Error('Not enough arguments to the operator ' + f.value)
 	let a = <Atom<number>>evaluated[0]
@@ -171,11 +171,11 @@ const _basicComparisonOps: FunMap2 = {
 	'==': _equal, '!=': _notEqual, '>': _gt, '<': _lt
 }
 // f.value contains the comparison symbol
-function performBasicComparisonOps(r: List, f: Atom<string>): Atom<boolean> {
+function performBasicComparisonOps(r: List, f: Atom<string>, ctx: Context): Atom<boolean> {
 	const fun = _basicComparisonOps[f.value]
 	if (r.items.length != 2) throw new Error('Comparison operation ' + f.value + ' needs 2 arguments')
 	const [a, b] = r.items
-	return fun(Eval(a), Eval(b))
+	return fun(Eval(a, ctx), Eval(b, ctx))
 }
 //-----------------------------------------------------
 // logical ops
@@ -195,22 +195,72 @@ const _basicLogicalOps: FunMap2 = {
 	'&&': _and, '||': _or
 }
 
-function performBasicLogicalOps(r: List, f: Atom<string>): Atom<boolean> {
+function performBasicLogicalOps(r: List, f: Atom<string>, ctx: Context): Atom<boolean> {
 	const fun = _basicLogicalOps[f.value]
 	if (r.items.length != 2) throw new Error('Logical operation ' + f.value + ' needs 2 arguments')
 	const [a, b] = r.items
-	return fun(Eval(a), Eval(b))
+	return fun(Eval(a, ctx), Eval(b, ctx))
 }
 
-function performConditionalLogicalOps(r: List, f: Atom<string>): AUT {
+function performConditionalLogicalOps(r: List, f: Atom<string>, ctx: Context): AUT {
 	const [test, ifTrue, ifFalse] = r.items
-	return Eval(test).value ? Eval(ifTrue) : Eval(ifFalse)
+	return Eval(test, ctx).value ? Eval(ifTrue, ctx) : Eval(ifFalse, ctx)
 }
+//-------------------------------------------------------------------
+type TUserFunc = (args: List) => AUT
+interface Context {
+	[key: string]: AUT | List | TUserFunc
+}
+function performFunctionDefinitionOps(r: List, f: Atom<string>, ctx: Context): AUT {
+	if (r.items.length < 3) throw Error('Malformed function definition')
+	const fname = <Atom<string>>r.items[0]
+	// check if the function name already exists in the context
+	if (fname.value in ctx) {
+		throw Error('Function `' + fname.value + '` already defined')
+	} else {
+		const fparams = <List>r.items[1]
+		const fbodies = r.items.slice(2)
+		ctx[fname.value] = ((args) => {// body of the function
+			// bind args to params
+			if (args.items.length != fparams.items.length)
+				throw Error('Expected ' + fparams.items.length +
+					' number of argumets to the function ' + fname)
+
+			for (let i = 0; i < fparams.items.length; i++) {
+				const p = <Atom<string>>fparams.items[i]
+				ctx[p.value] = args.items[i]
+				console.log(`setting ${p.value} = ${args.items[i]}`)
+			}
+
+			// defn <name> <params> <body 1> <body 2> .. <body n>
+			// evaluate all bodies, and return the result of the last one
+			const h = fbodies.map(k => Eval(k, ctx))
+			return h[h.length - 1]
+		})
+	}
+	// definition succeeded
+	return <Atom<boolean>>{ value: true }
+}
+
+function performFunctionExecOps(r: List, f: Atom<string>, ctx: Context): AUT {
+	const fun = <TUserFunc>ctx[f.value]
+	const args = r.items.slice(0)
+	const a = args.map(k => Eval(k, ctx))
+	return fun(<List>{ items: a })
+}
+
 // rule 1: A list should start with a symbol which can be a
 //         name of an operator
-export function Eval(exp: AUT | List): AUT {
+export function Eval(exp: AUT | List, ctx: Context = {}): AUT {
 	// if Atom, return itself
 	if (isAtom(exp)) {
+		if (typeof exp.value === 'string') {
+			if (exp.value.startsWith("'"))
+				return exp
+			if (exp.value in ctx) { // resolve symbol to a value
+				return <AUT>ctx[exp.value]
+			}
+		}
 		return exp
 	} else if (isList(exp)) {
 		// if List evaluate the first
@@ -218,16 +268,30 @@ export function Eval(exp: AUT | List): AUT {
 		const f = <Atom<string>>first(exp)
 		const r = rest(exp)
 		if (f.value in _basicArithmeticOps) {
-			return performBasicArithmeticOps(r, f)
+			return performBasicArithmeticOps(r, f, ctx)
 		} else if (f.value in _basicComparisonOps) {
-			return performBasicComparisonOps(r, f)
+			return performBasicComparisonOps(r, f, ctx)
 		} else if (f.value in _basicLogicalOps) {
-			return performBasicLogicalOps(r, f)
+			return performBasicLogicalOps(r, f, ctx)
 		} else if (f.value === 'if') {
-			return performConditionalLogicalOps(r, f)
+			return performConditionalLogicalOps(r, f, ctx)
+		} else if (f.value === 'defn') {
+			return performFunctionDefinitionOps(r, f, ctx)
+		} else if (f.value in ctx) {
+			return performFunctionExecOps(r, f, ctx)
 		}
 		return f
 	}
 	throw Error('Unknown evaluation error ' + exp)
 }
 
+export function Run(exp: AUT | List): AUT {
+	const ctx: Context = {}
+	const retval = Eval(exp, ctx)
+	if ('main' in ctx) {
+		const fun = <TUserFunc>ctx['main']
+		const args = <List>{ items: [] }
+		return fun(args)
+	}
+	return retval
+}
